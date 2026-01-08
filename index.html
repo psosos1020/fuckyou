@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <!-- 꼬rpg.html -->
+<!-- head 또는 body의 맨 위 쪽에 추가 -->
+<script src="client/mockServer.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>꼬RPSG - MMORPG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .login-box {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 40px;
+            border-radius: 10px;
+            border: 2px solid #667eea;
+            text-align: center;
+        }
+
+        .login-box h1 {
+            font-size: 2em;
+            margin-bottom: 30px;
+            color: #667eea;
+        }
+
+        .login-box input, .login-box select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #667eea;
+            border-radius: 5px;
+            background: #222;
+            color: #fff;
+            font-size: 1em;
+        }
+
+        .login-box button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+        }
+
+        .login-box button:hover {
+            background: #764ba2;
+        }
+
+        .game-container {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            background: #2a2a2a;
+            flex-direction: row;
+        }
+
+        .game-container.active {
+            display: flex;
+        }
+
+        .game-world {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%);
+            border-right: 2px solid #333;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: crosshair;
+        }
+
+        .ui-panel {
+            width: 350px;
+            background: rgba(0, 0, 0, 0.95);
+            border-left: 2px solid #667eea;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tab-buttons {
+            display: flex;
+            background: #1a1a1a;
+            border-bottom: 1px solid #444;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: #222;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-size: 0.85em;
+        }
+
+        .tab-btn.active {
+            background: #333;
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stat-window h3, .section-title {
+            color: #667eea;
+            margin: 15px 0 10px 0;
+            font-size: 0.9em;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+            margin: 8px 0;
+            color: #aaa;
+        }
+
+        .stat-value {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .hp-bar, .mp-bar, .exp-bar {
+            width: 100%;
+            height: 12px;
+            background: #333;
+            border-radius: 4px;
+            margin: 5px 0;
+            overflow: hidden;
+            border: 1px solid #555;
+        }
+
+        .hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ff8844);
+        }
+
+        .mp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4444ff, #8844ff);
+        }
+
+        .exp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #44ff44, #88ff88);
+        }
+
+        .skill-list, .inventory-grid, .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .skill-btn, .inventory-slot, .shop-item {
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 3px;
+            padding: 8px;
+            cursor: pointer;
+            font-size: 0.75em;
+            text-align: center;
+            color: #aaa;
+        }
+
+        .skill-btn:hover, .inventory-slot:hover, .shop-item:hover {
+            background: #444;
+            border-color: #667eea;
+        }
+
+        .skill-btn.cooldown {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .player {
+            position: absolute;
+            width: 30px;
+            height: 40px;
+            background: #ff6b6b;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            color: white;
+            border: 2px solid #fff;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .player.other {
+            background: #4ecdc4;
+            border-color: #667eea;
+        }
+
+        .mob {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            background: #95e1d3;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6em;
+            color: #333;
+            border: 1px solid #666;
+            font-weight: bold;
+        }
+
+        .mob.boss {
+            width: 40px;
+            height: 40px;
+            background: #ff3333;
+            color: #fff;
+            border: 2px solid #ffaa00;
+            font-size: 0.8em;
+        }
+
+        .mob-hp {
+            position: absolute;
+            top: -8px;
+            width: 100%;
+            height: 3px;
+            background: #333;
+            border-radius: 2px;
+        }
+
+        .mob-hp-fill {
+            height: 100%;
+            background: #44ff44;
+        }
+
+        .nickname {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7em;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2px 6px;
+            border-radius: 2px;
+            white-space: nowrap;
+        }
+
+        .damage-text {
+            position: absolute;
+            color: #ff4444;
+            font-weight: bold;
+            animation: float-up 1s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes float-up {
+            to {
+                transform: translateY(-30px);
+                opacity: 0;
+            }
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin: 10px 0;
+        }
+
+        button {
+            padding: 8px;
+            background: #667eea;
+            border: none;
+            border-radius: 3px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        button:hover {
+            background: #764ba2;
+        }
+
+        button:disabled {
+            background: #444;
+            cursor: not-allowed;
+        }
+
+        .popup {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid #667eea;
+            border-radius: 5px;
+            padding: 20px;
+            z-index: 500;
+            max-width: 400px;
+            display: none;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .popup.active {
+            display: block;
+        }
+
+        .popup h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .popup-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 1.5em;
+        }
+
+        .chat-window {
+            padding: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid #444;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-size: 0.8em;
+        }
+
+        .chat-message {
+            margin: 5px 0;
+            padding: 5px;
+            background: rgba(102, 126, 234, 0.2);
+            border-radius: 3px;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 5px;
+            padding: 10px;
+            border-top: 1px solid #444;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 8px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 3px;
+            color: #fff;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <!-- 로그인 화면 -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-box">
+            <h1>꼬RPSG</h1>
+            <input type="text" id="nicknameInput" placeholder="닉네임 입력" maxlength="15">
+            <select id="jobSelect">
+                <option value="warrior">전사 (STR 중심)</option>
+                <option value="mage">마법사 (INT 중심)</option>
+                <option value="archer">궁수 (DEX 중심)</option>
+            </select>
+            <button onclick="login()">게임 시작</button>
+            <p style="margin-top: 20px; font-size: 0.8em; color: #aaa;">
+                LAN 멀티플레이 MMORPG<br>
+                모든 기능 완성 버전
+            </p>
+        </div>
+    </div>
+
+    <!-- 게임 화면 -->
+    <div class="game-container" id="gameContainer">
+        <!-- 게임 월드 -->
+        <div class="game-world">
+            <canvas id="gameCanvas"></canvas>
+        </div>
+
+        <!-- UI 패널 -->
+        <div class="ui-panel">
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="switchTab('stat')">정보</button>
+                <button class="tab-btn" onclick="switchTab('skill')">스킬</button>
+                <button class="tab-btn" onclick="switchTab('inventory')">인벤</button>
+                <button class="tab-btn" onclick="switchTab('shop')">상점</button>
+                <button class="tab-btn" onclick="switchTab('guild')">길드</button>
+                <button class="tab-btn" onclick="switchTab('pvp')">PVP</button>
+            </div>
+
+            <!-- 정보 탭 -->
+            <div class="tab-content active" id="statTab">
+                <div class="stat-window">
+                    <h3>📊 캐릭터 정보</h3>
+                    <div class="stat-row">
+                        <span>닉네임:</span>
+                        <span class="stat-value" id="nicknameDisplay">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>직업:</span>
+                        <span class="stat-value" id="jobDisplay">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>레벨:</span>
+                        <span class="stat-value" id="levelDisplay">1</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>경험치:</span>
+                        <div class="exp-bar">
+                            <div class="exp-fill" id="expBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <span>체력 (HP):</span>
+                        <div class="hp-bar">
+                            <div class="hp-fill" id="hpBar" style="width: 100%"></div>
+                        </div>
+                        <span class="stat-value" id="hpText">100/100</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>마나 (MP):</span>
+                        <div class="mp-bar">
+                            <div class="mp-fill" id="mpBar" style="width: 100%"></div>
+                        </div>
+                        <span class="stat-value" id="mpText">50/50</span>
+                    </div>
+                    
+                    <h3>⚔️ 스탯</h3>
+                    <div class="stat-row">
+                        <span>STR (힘):</span>
+                        <span class="stat-value" id="strDisplay">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>DEX (민첩):</span>
+                        <span class="stat-value" id="dexDisplay">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>INT (지능):</span>
+                        <span class="stat-value" id="intDisplay">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>VIT (체질):</span>
+                        <span class="stat-value" id="vitDisplay">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>공격력:</span>
+                        <span class="stat-value" id="attackDisplay">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>방어력:</span>
+                        <span class="stat-value" id="defenseDisplay">0</span>
+                    </div>
+
+                    <h3>💰 기타</h3>
+                    <div class="stat-row">
+                        <span>메소:</span>
+                        <span class="stat-value" id="mesoDisplay">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>강화 수치:</span>
+                        <span class="stat-value" id="enhanceDisplay">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>PVP 승리:</span>
+                        <span class="stat-value" id="winsDisplay">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>PVP 패배:</span>
+                        <span class="stat-value" id="lossesDisplay">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 스킬 탭 -->
+            <div class="tab-content" id="skillTab">
+                <h3>🔥 스킬</h3>
+                <div class="skill-list" id="skillList"></div>
+                <p style="font-size: 0.75em; color: #999; margin-top: 10px;">좌클릭: 공격, 우클릭: 스킬 사용</p>
+            </div>
+
+            <!-- 인벤토리 탭 -->
+            <div class="tab-content" id="inventoryTab">
+                <h3>🎒 인벤토리</h3>
+                <div class="button-group">
+                    <button onclick="unequipItem('weapon')">무기 벗기</button>
+                    <button onclick="unequipItem('armor')">갑옷 벗기</button>
+                </div>
+                <h3 style="margin-top: 10px;">📦 착용 중</h3>
+                <div class="stat-row">
+                    <span>무기:</span>
+                    <span class="stat-value" id="equippedWeapon">없음</span>
+                </div>
+                <div class="stat-row">
+                    <span>갑옷:</span>
+                    <span class="stat-value" id="equippedArmor">없음</span>
+                </div>
+                <h3>📥 소유 아이템</h3>
+                <div class="inventory-grid" id="inventoryGrid"></div>
+            </div>
+
+            <!-- 상점 탭 -->
+            <div class="tab-content" id="shopTab">
+                <h3>🏪 상점</h3>
+                <h3 style="margin-top: 15px;">검</h3>
+                <div class="shop-grid" id="weaponShop"></div>
+                <h3 style="margin-top: 15px;">갑옷</h3>
+                <div class="shop-grid" id="armorShop"></div>
+                <h3 style="margin-top: 15px;">포션</h3>
+                <div class="shop-grid" id="potionShop"></div>
+            </div>
+
+            <!-- 길드 탭 -->
+            <div class="tab-content" id="guildTab">
+                <h3>⚔️ 길드</h3>
+                <div class="button-group">
+                    <input type="text" id="guildNameInput" placeholder="길드명" style="grid-column: 1/3; padding: 8px; background: #333; border: 1px solid #555; border-radius: 3px; color: #fff;">
+                    <button onclick="createGuild()" style="grid-column: 1/3;">길드 생성</button>
+                </div>
+                <div id="guildInfo" style="margin-top: 20px; display: none;">
+                    <div class="stat-row">
+                        <span>길드명:</span>
+                        <span class="stat-value" id="myGuildName">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>길드주:</span>
+                        <span class="stat-value" id="myGuildLeader">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>길드원:</span>
+                        <span class="stat-value" id="myGuildMembers">0</span>
+                    </div>
+                </div>
+                <h3 style="margin-top: 15px;">모집 중인 길드</h3>
+                <div id="guildList"></div>
+            </div>
+
+            <!-- PVP 탭 -->
+            <div class="tab-content" id="pvpTab">
+                <h3>⚡ PVP</h3>
+                <h3 style="margin-top: 15px;">다른 플레이어</h3>
+                <div id="playerList" style="font-size: 0.85em;"></div>
+            </div>
+
+            <!-- 채팅 -->
+            <div class="chat-window">
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input">
+                    <input type="text" id="chatInput" placeholder="채팅 입력..." maxlength="50">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ws = new WebSocket(`ws://${window.location.host}`);
+        let playerId = null;
+        let playerData = null;
+        const gameState = { players: [], mobs: [], guilds: [] };
+        const currentSkill = { id: null, lastUse: 0 };
+
+        // Canvas 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Canvas 크기 설정
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // 스프라이트 이미지 로드
+        const spriteImages = {};
+        const spriteConfig = {
+            // 사용자가 추가할 이미지 파일명
+            // 플레이어 스프라이트로 사용자가 제공할 `개고기.png`
+            player: {
+                image: './개고기.png'
+            },
+            // 몹 스프라이트로 사용자가 제공할 `일론.png`
+            mobs: {
+                image: './일론.png',
+                types: {
+                    slime: 'slime',
+                    zombie: 'zombie',
+                    goblin: 'goblin',
+                    orc: 'orc',
+                    boss_dragon: 'boss_dragon'
+                }
+            }
+        };
+
+        // 이미지 로드
+        function loadSprites() {
+            Object.keys(spriteConfig).forEach(key => {
+                const img = new Image();
+                img.src = spriteConfig[key].image;
+                img.onerror = () => console.warn(`스프라이트 로드 실패: ${spriteConfig[key].image}`);
+                spriteImages[key] = img;
+            });
+        }
+        loadSprites();
+
+        // 스프라이트 그리기 함수
+        function drawSprite(spriteName, frameIndex, x, y, scale = 1) {
+            const config = spriteConfig[spriteName];
+            const img = spriteImages[spriteName];
+            if (!img || !img.complete) return; // 이미지 로드 대기
+
+            // 단일 이미지(스프라이트 시트가 아닌 경우) 처리: 이미지의 전체 크기를 사용
+            const w = img.naturalWidth || img.width;
+            const h = img.naturalHeight || img.height;
+
+            ctx.drawImage(
+                img,
+                0, 0, w, h,
+                x - (w * scale) / 2,
+                y - h * scale,
+                w * scale,
+                h * scale
+            );
+        }
+
+        // 이펙트(파티클) 시스템
+        const effects = [];
+        function spawnEffect(x, y, opts = {}) {
+            effects.push({ x, y, life: opts.life || 500, t: 0, size: opts.size || 6, color: opts.color || '#ffdd55' });
+        }
+
+        function updateAndDrawEffects(dt) {
+            for (let i = effects.length - 1; i >= 0; i--) {
+                const e = effects[i];
+                e.t += dt;
+                const progress = e.t / e.life;
+                if (progress >= 1) {
+                    effects.splice(i, 1);
+                    continue;
+                }
+                const alpha = 1 - progress;
+                const size = e.size * (1 + progress * 2);
+                ctx.beginPath();
+                ctx.fillStyle = `rgba(${parseInt(e.color.slice(1,3),16)},${parseInt(e.color.slice(3,5),16)},${parseInt(e.color.slice(5,7),16)},${alpha})`;
+                ctx.arc(e.x, e.y - progress * 20, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // WebSocket 이벤트
+        ws.onopen = () => console.log('서버 연결됨');
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'joined') {
+                playerId = data.playerId;
+                playerData = data.player;
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('gameContainer').classList.add('active');
+                renderShop();
+                updateUI();
+            } else if (data.type === 'gameState') {
+                gameState.players = data.players.filter(p => p.id !== playerId);
+                gameState.mobs = data.mobs;
+                gameState.guilds = data.guilds || [];
+                
+                playerData = data.players.find(p => p.id === playerId) || playerData;
+                render();
+            } else if (data.type === 'effect') {
+                // 서버로부터 이펙트 발생 알림 수신
+                if (data.effect === 'hit') {
+                    spawnEffect(data.x, data.y, { life: 700, size: 8, color: '#ff4444' });
+                }
+            }
+        };
+
+        ws.onerror = (error) => console.error('WebSocket 오류:', error);
+
+        // 로그인
+        function login() {
+            const nickname = document.getElementById('nicknameInput').value;
+            const job = document.getElementById('jobSelect').value;
+            if (nickname.trim() === '') {
+                alert('닉네임을 입력하세요');
+                return;
+            }
+            ws.send(JSON.stringify({ type: 'join', nickname, job }));
+        }
+
+        // 탭 전환
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tab + 'Tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // 마우스 이동으로 플레이어 이동
+        canvas.addEventListener('mousemove', (e) => {
+            if (playerData) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                playerData.x = x;
+                playerData.y = y;
+                ws.send(JSON.stringify({ type: 'move', x, y }));
+            }
+        });
+
+        // 좌클릭: 공격
+        canvas.addEventListener('click', (e) => {
+            if (e.button !== 0) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            for (const [mobId, mob] of gameState.mobs) {
+                const dx = mob.x - x;
+                const dy = mob.y - y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 50) {
+                    ws.send(JSON.stringify({ type: 'attack', mobId }));
+                        // 로컬 즉시 이펙트(서버 메시지 도달 전에도 시각적 반응이 보이게)
+                        spawnEffect(mob.x, mob.y, { life: 600, size: 8, color: '#ff4444' });
+                    break;
+                }
+            }
+        });
+
+        // 우클릭: PVP 도전
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            gameState.players.forEach(player => {
+                const dx = player.x - x;
+                const dy = player.y - y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 50) {
+                    ws.send(JSON.stringify({ type: 'pvpRequest', targetId: player.id }));
+                    alert(player.nickname + '님에게 PVP를 신청했습니다!');
+                }
+            });
+        });
+
+        // 상점 렌더링
+        function renderShop() {
+            const itemDatabase = {
+                weapon: [
+                    { id: 'iron_sword', name: '철검', price: 100 },
+                    { id: 'steel_sword', name: '강철검', price: 500 },
+                    { id: 'gold_sword', name: '황금검', price: 2000 }
+                ],
+                armor: [
+                    { id: 'leather_armor', name: '가죽갑옷', price: 80 },
+                    { id: 'iron_armor', name: '철갑옷', price: 400 },
+                    { id: 'steel_armor', name: '강철갑옷', price: 1500 }
+                ],
+                consumable: [
+                    { id: 'hp_potion', name: '체력 포션', price: 20 },
+                    { id: 'mp_potion', name: '마나 포션', price: 15 },
+                    { id: 'all_potion', name: '만능 포션', price: 50 }
+                ]
+            };
+
+            let html = '';
+            itemDatabase.weapon.forEach((item, idx) => {
+                html += `<div class="shop-item" onclick="buyItem('weapon', ${idx})">${item.name}<br>${item.price} 메소</div>`;
+            });
+            document.getElementById('weaponShop').innerHTML = html;
+
+            html = '';
+            itemDatabase.armor.forEach((item, idx) => {
+                html += `<div class="shop-item" onclick="buyItem('armor', ${idx})">${item.name}<br>${item.price} 메소</div>`;
+            });
+            document.getElementById('armorShop').innerHTML = html;
+
+            html = '';
+            itemDatabase.consumable.forEach((item, idx) => {
+                html += `<div class="shop-item" onclick="buyItem('consumable', ${idx})">${item.name}<br>${item.price} 메소</div>`;
+            });
+            document.getElementById('potionShop').innerHTML = html;
+        }
+
+        // 아이템 구매
+        function buyItem(type, idx) {
+            ws.send(JSON.stringify({ type: 'buyItem', itemType: type, itemIndex: idx }));
+        }
+
+        // 아이템 착용
+        function equipItem(itemId) {
+            const item = playerData.inventory.find(i => i.id === itemId);
+            if (item && (item.type === 'weapon' || item.type === 'armor')) {
+                ws.send(JSON.stringify({ type: 'equipItem', itemId }));
+            }
+        }
+
+        // 아이템 벗기
+        function unequipItem(slot) {
+            ws.send(JSON.stringify({ type: 'unequipItem', slot }));
+        }
+
+        // 강화
+        function enhanceItem() {
+            if (playerData.equipment.weapon) {
+                ws.send(JSON.stringify({ type: 'enhance', itemId: playerData.equipment.weapon.id }));
+            } else {
+                alert('착용한 무기가 없습니다!');
+            }
+        }
+
+        // 길드 생성
+        function createGuild() {
+            const guildName = document.getElementById('guildNameInput').value;
+            if (!guildName.trim()) {
+                alert('길드명을 입력하세요');
+                return;
+            }
+            ws.send(JSON.stringify({ type: 'createGuild', guildName }));
+        }
+
+        // 길드 가입
+        function joinGuild(guildId) {
+            ws.send(JSON.stringify({ type: 'joinGuild', guildId }));
+        }
+
+        // 스킬 사용
+        function useSkill(skillId) {
+            if (gameState.mobs.size > 0) {
+                const mob = gameState.mobs.entries().next().value[1];
+                ws.send(JSON.stringify({ type: 'useSkill', skillId, targetId: gameState.mobs.keys().next().value }));
+            }
+        }
+
+        // UI 업데이트
+        function updateUI() {
+            if (!playerData) return;
+            
+            document.getElementById('nicknameDisplay').textContent = playerData.nickname;
+            document.getElementById('jobDisplay').textContent = playerData.job === 'warrior' ? '전사' : playerData.job === 'mage' ? '마법사' : '궁수';
+            document.getElementById('levelDisplay').textContent = playerData.level;
+            document.getElementById('hpBar').style.width = (playerData.hp / playerData.maxHp * 100) + '%';
+            document.getElementById('hpText').textContent = playerData.hp + '/' + playerData.maxHp;
+            document.getElementById('mpBar').style.width = (playerData.mp / playerData.maxMp * 100) + '%';
+            document.getElementById('mpText').textContent = playerData.mp + '/' + playerData.maxMp;
+            document.getElementById('expBar').style.width = (playerData.exp / playerData.expToLevelUp * 100) + '%';
+            document.getElementById('strDisplay').textContent = playerData.stats.str;
+            document.getElementById('dexDisplay').textContent = playerData.stats.dex;
+            document.getElementById('intDisplay').textContent = playerData.stats.int;
+            document.getElementById('vitDisplay').textContent = playerData.stats.vit;
+            document.getElementById('mesoDisplay').textContent = playerData.meso;
+            document.getElementById('enhanceDisplay').textContent = playerData.enhance;
+            document.getElementById('winsDisplay').textContent = playerData.pvpWins;
+            document.getElementById('lossesDisplay').textContent = playerData.pvpLosses;
+            document.getElementById('attackDisplay').textContent = Math.floor(playerData.stats.str + (playerData.equipment.weapon?.dmg || 0));
+            document.getElementById('defenseDisplay').textContent = Math.floor((playerData.equipment.armor?.def || 0) + playerData.stats.vit);
+            
+            // 장비 표시
+            document.getElementById('equippedWeapon').textContent = playerData.equipment.weapon ? playerData.equipment.weapon.name : '없음';
+            document.getElementById('equippedArmor').textContent = playerData.equipment.armor ? playerData.equipment.armor.name : '없음';
+
+            // 스킬 표시
+            let skillHtml = '';
+            playerData.skills.forEach(skill => {
+                skillHtml += `<button class="skill-btn" onclick="useSkill('${skill.id}')"><strong>${skill.name}</strong><br>MP:${skill.mp}</button>`;
+            });
+            document.getElementById('skillList').innerHTML = skillHtml;
+
+            // 인벤토리 업데이트
+            let inventoryHtml = '';
+            playerData.inventory.forEach(item => {
+                inventoryHtml += `<div class="inventory-slot" onclick="equipItem('${item.id}')" title="${item.name}">${item.name}<br>+${item.enhance}</div>`;
+            });
+            for (let i = playerData.inventory.length; i < 9; i++) {
+                inventoryHtml += '<div class="inventory-slot"></div>';
+            }
+            document.getElementById('inventoryGrid').innerHTML = inventoryHtml;
+
+            // 강화 버튼
+            let enhanceBtn = document.querySelector('button[onclick="enhanceItem()"]');
+            if (!enhanceBtn) {
+                const invTab = document.getElementById('inventoryTab');
+                const btn = document.createElement('button');
+                btn.textContent = '⭐ 스타포스 강화 (200 메소)';
+                btn.onclick = enhanceItem;
+                btn.style.gridColumn = '1/3';
+                btn.style.marginTop = '15px';
+                invTab.appendChild(btn);
+            }
+
+            // 길드 정보
+            if (playerData.guild) {
+                const guild = gameState.guilds.find(g => g.id === playerData.guild);
+                if (guild) {
+                    document.getElementById('guildInfo').style.display = 'block';
+                    document.getElementById('myGuildName').textContent = guild.name;
+                    document.getElementById('myGuildLeader').textContent = gameState.players.find(p => p.id === guild.leader)?.nickname || '알 수 없음';
+                    document.getElementById('myGuildMembers').textContent = guild.members.length;
+                }
+            }
+
+            // 플레이어 리스트
+            let playerHtml = '';
+            gameState.players.forEach(player => {
+                playerHtml += `<div style="padding: 8px; background: #333; margin: 5px 0; border-radius: 3px;">${player.nickname} (Lv.${player.level})<br><button onclick="ws.send(JSON.stringify({type:'pvpRequest',targetId:'${player.id}'}))" style="margin-top: 5px; font-size: 0.8em;">PVP 도전</button></div>`;
+            });
+            document.getElementById('playerList').innerHTML = playerHtml || '<p style="color: #999;">다른 플레이어가 없습니다</p>';
+        }
+
+        // 게임 렌더링 (Canvas 기반)
+        function render() {
+            // 배경 그리기
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 그라데이션 배경
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#E0F6FF');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 다른 플레이어 렌더링
+            gameState.players.forEach((player, idx) => {
+                drawSprite('player', spriteConfig.player.frames.idle, player.x, player.y, 1.2);
+                
+                // 닉네임과 레벨
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(player.x - 40, player.y - 45, 80, 15);
+                ctx.fillStyle = '#4ecdc4';
+                ctx.font = 'bold 10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${player.nickname} Lv.${player.level}`, player.x, player.y - 37);
+            });
+
+            // 몹 렌더링
+            gameState.mobs.forEach((mob, idx) => {
+                const mobTypeIndex = spriteConfig.mobs.types[mob.type] || 0;
+                drawSprite('mobs', 0, mob.x, mob.y, 1);
+                
+                // 몹 HP바
+                const barWidth = 30;
+                const barHeight = 3;
+                ctx.fillStyle = '#333';
+                ctx.fillRect(mob.x - barWidth / 2, mob.y - 35, barWidth, barHeight);
+                
+                const hpPercent = Math.max(0, mob.hp / mob.maxHp);
+                ctx.fillStyle = `hsl(${hpPercent * 120}, 100%, 50%)`;
+                ctx.fillRect(mob.x - barWidth / 2, mob.y - 35, barWidth * hpPercent, barHeight);
+                
+                // 몹 이름
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 9px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(mob.name, mob.x, mob.y + 25);
+            });
+
+            // 내 플레이어 렌더링
+            if (playerData) {
+                drawSprite('player', 0, playerData.x, playerData.y, 1.2);
+                
+                // 닉네임과 레벨
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(playerData.x - 40, playerData.y - 45, 80, 15);
+                ctx.fillStyle = '#ff6b6b';
+                ctx.font = 'bold 10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${playerData.nickname} Lv.${playerData.level}`, playerData.x, playerData.y - 37);
+            }
+
+            // 이펙트 업데이트 및 렌더
+            updateAndDrawEffects(16);
+
+            updateUI();
+        }
+
+        // 채팅 전송
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const message = e.target.value;
+                if (message.trim()) {
+                    const chatMessages = document.getElementById('chatMessages');
+                    const msgEl = document.createElement('div');
+                    msgEl.className = 'chat-message';
+                    msgEl.textContent = `[${playerData.nickname}]: ${message}`;
+                    chatMessages.appendChild(msgEl);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    e.target.value = '';
+                }
+            }
+        });
+
+        // 주기적으로 렌더링
+        setInterval(render, 1000 / 60);
+        <script src="client/game-client.js"></script>
+    </script>
+</body>
+</html>
